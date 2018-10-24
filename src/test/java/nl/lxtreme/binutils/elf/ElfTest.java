@@ -41,7 +41,7 @@ public class ElfTest {
 
 	@Parameters
 	public static Collection<String> getparameters() {
-		return Arrays.asList(new String[] { "ts_print", "con_flash", "miniBench_neon", "helloWorld_static", "elf_64bit",
+		return Arrays.asList(new String[] { "ts_print", "con_flash", "helloWorld_static", "elf_64bit",
 				"elf_arm", "elf_without_debug" });
 	}
 	// METHODS
