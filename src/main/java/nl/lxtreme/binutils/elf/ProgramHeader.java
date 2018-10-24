@@ -18,7 +18,7 @@ import java.nio.*;
 public class ProgramHeader {
 	public final SegmentType type;
 	public final long flags;
-	public final long offset;
+	public long offset;
 	public final long virtualAddress;
 	public final long physicalAddress;
 	public final long segmentFileSize;
@@ -51,6 +51,22 @@ public class ProgramHeader {
 			throw new IOException("Unhandled ELF-class!");
 		}
 	}
+	
+	
+
+	public ProgramHeader(SegmentType type, long flags, long offset, long virtualAddress, long physicalAddress,
+			long segmentFileSize, long segmentMemorySize, long segmentAlignment) {
+		this.type = type;
+		this.flags = flags;
+		this.offset = offset;
+		this.virtualAddress = virtualAddress;
+		this.physicalAddress = physicalAddress;
+		this.segmentFileSize = segmentFileSize;
+		this.segmentMemorySize = segmentMemorySize;
+		this.segmentAlignment = segmentAlignment;
+	}
+
+
 
 	public void saveToByteBuffer(ByteBuffer buf, ElfClass elfClass) {
 		switch (elfClass) {

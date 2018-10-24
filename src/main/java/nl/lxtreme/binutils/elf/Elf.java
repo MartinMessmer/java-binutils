@@ -9,6 +9,8 @@ package nl.lxtreme.binutils.elf;
 
 import java.io.Closeable;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -169,9 +171,9 @@ public class Elf implements Closeable {
 	/**
 	 * New Constructor Added to Generate ELF and Save it later to a File!
 	 */
-	public Elf(ElfClass elfClass, ByteOrder byteOrder, AbiType abiType, ObjectFileType elfType,
-			MachineType machineType) {
-		header = new Header(elfClass, byteOrder, abiType, elfType, machineType);
+	public Elf(ElfClass elfClass, ByteOrder byteOrder, AbiType abiType, ObjectFileType elfType, MachineType machineType,
+			int flags) {
+		header = new Header(elfClass, byteOrder, abiType, elfType, machineType, flags);
 		sectionHeaders = new ArrayList<SectionHeader>(1);
 		sectionHeaders.add(new SectionHeader());
 
@@ -192,7 +194,44 @@ public class Elf implements Closeable {
 
 		sectionHeaders.add(sectionHeader);
 		header.sectionHeaderEntryCount = sectionHeaders.size();
+		header.sectionHeaderOffset = sectionHeader.fileOffset + sectionHeader.size;
+	}
 
+	public void AddSection(int[] section, String name, SectionType type, long flags, int link, int info, long alignment,
+			long entrySize) {
+		ByteBuffer byteBuffer = ByteBuffer.allocate(section.length * 4);
+		byteBuffer.limit(section.length * 4);
+		byteBuffer.order(header.elfByteOrder);
+		for (int b : section) {
+			byteBuffer.putInt(b);
+		}
+		byteBuffer.flip();
+		AddSection(byteBuffer, name, type, flags, link, info, alignment, entrySize);
+	}
+
+	public void addProgramHeader(SegmentType type, long flags, long offset, long virtualAddress, long physicalAddress,
+			long segmentFileSize, long segmentMemorySize, long segmentAlignment) {
+		ProgramHeader programHeader = new ProgramHeader(type, flags, offset, virtualAddress, physicalAddress,
+				segmentFileSize, segmentMemorySize, segmentAlignment);
+
+		programHeaders.add(programHeader);
+		header.programHeaderOffset = header.size;
+		header.programHeaderEntrySize = (header.elfClass == ElfClass.CLASS_32 ? 32 : 56);
+		header.programHeaderEntryCount = programHeaders.size();
+
+		// Program Headers are inserted behind ELF Header. Sections and SectionHeaders
+		// have to be moved back
+		for (SectionHeader sectionHeader : sectionHeaders) {
+			if (sectionHeader.type != SectionType.NULL) {
+				sectionHeader.fileOffset += header.programHeaderEntrySize;
+			}
+		}
+		header.sectionHeaderOffset += header.programHeaderEntrySize;
+
+		// All Offsets from Program Headers Offset need also to move back
+		for (ProgramHeader progHeader : programHeaders) {
+			progHeader.offset += header.programHeaderEntrySize;
+		}
 	}
 
 	public ByteBuffer SaveToByteBuffer() {
@@ -200,10 +239,12 @@ public class Elf implements Closeable {
 		buf.order(header.elfByteOrder);
 		header.saveToByteBuffer(buf, this);
 
+		// Write Program Headers
 		for (ProgramHeader programHeader : programHeaders) {
 			programHeader.saveToByteBuffer(buf, header.elfClass);
 		}
 
+		// Write Sections
 		for (SectionHeader sectionHeader : sectionHeaders) {
 			buf.limit((int) (sectionHeader.fileOffset + sectionHeader.size));
 			buf.position((int) sectionHeader.fileOffset);
@@ -211,6 +252,7 @@ public class Elf implements Closeable {
 			buf.put(sectionHeader.section);
 		}
 
+		// Write Section Headers
 		if (buf.limit() < header.sectionHeaderOffset) {
 			buf.limit((int) header.sectionHeaderOffset);
 		}
@@ -220,6 +262,14 @@ public class Elf implements Closeable {
 		}
 
 		return buf;
+	}
+
+	public void saveToFile(String fileName) throws FileNotFoundException, IOException {
+		try (FileOutputStream fileStream = new FileOutputStream(fileName, false)) {
+			ByteBuffer buf = SaveToByteBuffer();
+			buf.flip();
+			fileStream.getChannel().write(buf);
+		}
 	}
 
 	@Override

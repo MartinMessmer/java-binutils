@@ -14,6 +14,7 @@ import static org.junit.Assert.fail;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.ByteBuffer;
@@ -41,8 +42,8 @@ public class ElfTest {
 
 	@Parameters
 	public static Collection<String> getparameters() {
-		return Arrays.asList(new String[] { "ts_print", "con_flash", "helloWorld_static", "elf_64bit",
-				"elf_arm", "elf_without_debug" });
+		return Arrays.asList(new String[] { "ts_print", "con_flash", "helloWorld_static", "elf_64bit", "elf_arm",
+				"elf_without_debug" });
 	}
 	// METHODS
 
@@ -79,7 +80,6 @@ public class ElfTest {
 			assertEquals("Array differs at index " + i, expected[i], actual[i]);
 		}
 		assertArrayEquals(expected, actual);
-		// throw new UnsupportedOperationException("Not implemented until now!");
 	}
 
 	/**
@@ -114,7 +114,7 @@ public class ElfTest {
 		Elf readedElf = new Elf(getResource(testFile));
 
 		Elf createdElf = new Elf(readedElf.header.elfClass, readedElf.header.elfByteOrder, readedElf.header.abiType,
-				readedElf.header.elfType, readedElf.header.machineType);
+				readedElf.header.elfType, readedElf.header.machineType, readedElf.header.flags);
 
 		for (SectionHeader section : readedElf.sectionHeaders) {
 			if (section.type != SectionType.NULL) {
@@ -123,11 +123,30 @@ public class ElfTest {
 			}
 		}
 
+		for (ProgramHeader programHeader : readedElf.programHeaders) {
+			createdElf.addProgramHeader(programHeader.type, programHeader.flags, programHeader.offset,
+					programHeader.virtualAddress, programHeader.physicalAddress, programHeader.segmentFileSize,
+					programHeader.segmentMemorySize, programHeader.segmentAlignment);
+		}
+
 		ByteBuffer byteBuffer = createdElf.SaveToByteBuffer();
 		File file = new File(testFile + ".elf");
 		try (FileChannel channel = new FileOutputStream(file, false).getChannel()) {
 			byteBuffer.flip();
 			channel.write(byteBuffer);
 		}
+	}
+
+	@Test
+	public void EditExistingElfFile() throws IOException, Exception {
+		// Load Elf File which was Generated with objcopy from a old bin file.
+		// Should contain all Necessary Code but missing Program Header to Start!
+		Elf elf = new Elf(getResource("test.InternalRam.bin.elf"));
+		SectionHeader sectionToLoad = elf.getSectionHeaderByType(SectionType.PROGBITS);
+		elf.addProgramHeader(SegmentType.LOAD, 7, sectionToLoad.fileOffset, 0, 0, sectionToLoad.size,
+				sectionToLoad.size, 0);
+		
+		elf.header.elfType = ObjectFileType.EXEC;
+		elf.saveToFile("test.InternalRam.bin.elf.modified");
 	}
 }

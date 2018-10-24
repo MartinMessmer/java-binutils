@@ -45,16 +45,16 @@ public class Header {
 	public final ByteOrder elfByteOrder;
 	public final AbiType abiType;
 	public final int abiVersion;
-	public final ObjectFileType elfType;
+	public ObjectFileType elfType;
 	public final MachineType machineType;
 	public final int elfVersion;
 	public final long entryPoint;
 	public final int flags;
 	public final short size;
-	public final long programHeaderOffset;
-	public final long sectionHeaderOffset;
-	public final int programHeaderEntrySize;
-	public final int programHeaderEntryCount;
+	public long programHeaderOffset;
+	public long sectionHeaderOffset;
+	public int programHeaderEntrySize;
+	public int programHeaderEntryCount;
 	public final int sectionHeaderEntrySize;
 	public int sectionHeaderEntryCount;
 	public final int sectionNameTableIndex;
@@ -134,7 +134,7 @@ public class Header {
 	}
 
 	public Header(ElfClass elfClass, ByteOrder byteOrder, AbiType abiType, ObjectFileType elfType,
-			MachineType machineType) {
+			MachineType machineType, int flags) {
 		this.elfClass = elfClass;
 		this.elfByteOrder = byteOrder;
 		this.abiType = abiType;
@@ -145,7 +145,7 @@ public class Header {
 		this.entryPoint = 0;
 		this.flags = 0;
 		this.size = (short) (elfClass == ElfClass.CLASS_32 ? 52 : 64);
-		this.programHeaderOffset = 0;
+		this.programHeaderOffset = this.size;
 		this.sectionHeaderOffset = this.size;
 		this.programHeaderEntrySize = (elfClass == ElfClass.CLASS_32 ? 32 : 56);
 		this.programHeaderEntryCount = 0;
