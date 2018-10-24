@@ -68,6 +68,10 @@ public final class ObjectFileType {
     public int ordinal() {
         return this.type;
     }
+    
+    public int getType() {
+    	return type;
+    }
 
     @Override
     public String toString() {

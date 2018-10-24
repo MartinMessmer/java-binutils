@@ -47,4 +47,8 @@ public enum AbiType {
     public String toString() {
         return desc;
     }
+    
+    public byte getNo() {
+    	return (byte)no;
+    }
 }

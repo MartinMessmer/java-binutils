@@ -114,4 +114,8 @@ public enum MachineType {
     public String toString() {
         return desc;
     }
+    
+    public int getNo() {
+    	return no;
+    }
 }
