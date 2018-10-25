@@ -18,6 +18,7 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import nl.lxtreme.binutils.elf.DynamicEntry.Tag;
@@ -118,22 +119,25 @@ public class Elf implements Closeable {
 			this.sectionHeaders.add(sHdr);
 		}
 
+		for (SectionHeader sectionHeader : sectionHeaders) {
+			sectionHeader.section = getSection(sectionHeader);
+		}
+
 		if (header.sectionNameTableIndex != 0) {
 			// There's a section name string table present...
 			SectionHeader shdr = this.sectionHeaders.get(header.sectionNameTableIndex);
 
-			buf = getSection(shdr);
+			buf = shdr.section;
 			if (buf == null) {
 				throw new IOException("Unable to get section name table!");
 			}
 
-			for (SectionHeader hdr : sectionHeaders) {
-				hdr.setName(buf);
-			}
-		}
+			String stringTable = new String(buf.array(), 0, buf.limit());
 
-		for (SectionHeader sectionHeader : sectionHeaders) {
-			sectionHeader.section = getSection(sectionHeader);
+			for (SectionHeader hdr : sectionHeaders) {
+				int endIndex = stringTable.indexOf(0, hdr.nameOffset);
+				hdr.setName(stringTable.substring(hdr.nameOffset, endIndex));
+			}
 		}
 
 		ProgramHeader phdr = getProgramHeaderByType(SegmentType.DYNAMIC);
@@ -176,8 +180,6 @@ public class Elf implements Closeable {
 		header = new Header(elfClass, byteOrder, abiType, elfType, machineType, flags);
 		sectionHeaders = new ArrayList<SectionHeader>(1);
 		sectionHeaders.add(new SectionHeader());
-
-		// TODO:
 		programHeaders = new ArrayList<ProgramHeader>();
 		dynamicTable = new DynamicEntry[0];
 	}
@@ -185,6 +187,10 @@ public class Elf implements Closeable {
 	public void AddSection(ByteBuffer section, String name, SectionType type, long flags, int link, int info,
 			long alignment, long entrySize) {
 		SectionHeader sectionHeader = new SectionHeader(section, name, type, flags, link, info, alignment, entrySize);
+		AddSection(sectionHeader);
+	}
+
+	public void AddSection(SectionHeader sectionHeader) {
 		SectionHeader lastSection = sectionHeaders.get(sectionHeaders.size() - 1);
 		if (lastSection.type == SectionType.NULL) {
 			sectionHeader.fileOffset = header.size + header.programHeaderEntryCount * header.programHeaderEntrySize;
@@ -195,18 +201,6 @@ public class Elf implements Closeable {
 		sectionHeaders.add(sectionHeader);
 		header.sectionHeaderEntryCount = sectionHeaders.size();
 		header.sectionHeaderOffset = sectionHeader.fileOffset + sectionHeader.size;
-	}
-
-	public void AddSection(int[] section, String name, SectionType type, long flags, int link, int info, long alignment,
-			long entrySize) {
-		ByteBuffer byteBuffer = ByteBuffer.allocate(section.length * 4);
-		byteBuffer.limit(section.length * 4);
-		byteBuffer.order(header.elfByteOrder);
-		for (int b : section) {
-			byteBuffer.putInt(b);
-		}
-		byteBuffer.flip();
-		AddSection(byteBuffer, name, type, flags, link, info, alignment, entrySize);
 	}
 
 	public void addProgramHeader(SegmentType type, long flags, long offset, long virtualAddress, long physicalAddress,
@@ -235,6 +229,7 @@ public class Elf implements Closeable {
 	}
 
 	public ByteBuffer SaveToByteBuffer() {
+		saveSectionHeaderNamesToTable();
 		ByteBuffer buf = ByteBuffer.allocate(0xFFFFFF);
 		buf.order(header.elfByteOrder);
 		header.saveToByteBuffer(buf, this);
@@ -262,6 +257,37 @@ public class Elf implements Closeable {
 		}
 
 		return buf;
+	}
+
+	private void AddString(String str, ByteBuffer buf) {
+		buf.limit(buf.position() + str.length() + 1);
+		buf.put(str.getBytes());
+		buf.put((byte) 0);
+	}
+
+	private void saveSectionHeaderNamesToTable() {
+		if (header.sectionNameTableIndex == 0) {
+			ByteBuffer buf = ByteBuffer.allocate(0xFFFF);
+			buf.order(header.elfByteOrder);
+			for (SectionHeader sectionHeader : sectionHeaders) {
+				sectionHeader.nameOffset = buf.position();
+				AddString(sectionHeader.getName(), buf);
+			}
+
+
+			String shstrtabName = ".shstrtab";
+			int shstrTabNameOffset = buf.position();
+			AddString(shstrtabName, buf);
+			
+			buf.flip();
+
+			SectionHeader shstrtab = new SectionHeader(buf, shstrtabName, SectionType.STRTAB, 0, 0, 0, 1, 0);
+			shstrtab.nameOffset = shstrTabNameOffset;
+			AddSection(shstrtab);
+			header.sectionNameTableIndex = sectionHeaders.indexOf(shstrtab);
+		} else {
+			// TODO: add new Section Header if already exists
+		}
 	}
 
 	public void saveToFile(String fileName) throws FileNotFoundException, IOException {
@@ -416,6 +442,15 @@ public class Elf implements Closeable {
 		readFully(channel, buf, "Unable to read section completely!");
 
 		return buf;
+	}
+
+	public ByteBuffer getSectionByName(String SectionName) throws IOException {
+		SectionHeader sectionHeader = sectionHeaders.stream().filter(x -> SectionName.equals(x.getName())).findFirst()
+				.orElse(null);
+		if (sectionHeader == null) {
+			throw new IOException("Section " + SectionName + " not found");
+		}
+		return sectionHeader.section;
 	}
 
 	/**

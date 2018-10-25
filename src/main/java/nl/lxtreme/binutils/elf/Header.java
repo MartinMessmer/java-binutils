@@ -57,7 +57,7 @@ public class Header {
 	public int programHeaderEntryCount;
 	public final int sectionHeaderEntrySize;
 	public int sectionHeaderEntryCount;
-	public final int sectionNameTableIndex;
+	public int sectionNameTableIndex;
 
 	public Header(ReadableByteChannel channel) throws IOException {
 		final ByteBuffer buf = ByteBuffer.allocate(128);

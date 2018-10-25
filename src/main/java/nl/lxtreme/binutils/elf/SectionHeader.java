@@ -14,7 +14,7 @@ import java.nio.ByteBuffer;
  * Represents information about the various sections in an ELF object.
  */
 public class SectionHeader {
-	private final int nameOffset;
+	public int nameOffset;
 	private String name;
 
 	public final SectionType type;
@@ -75,6 +75,7 @@ public class SectionHeader {
 		alignment = 0;
 		entrySize = 0;
 		section = ByteBuffer.allocate(0);
+		name = "";
 	}
 
 	public SectionHeader(ByteBuffer section, String name, SectionType type, long flags, int link, int info,
@@ -98,17 +99,8 @@ public class SectionHeader {
 		return name;
 	}
 
-	void setName(ByteBuffer buf) {
-		if (nameOffset > 0) {
-			byte[] array = buf.array();
-
-			int end = nameOffset;
-			while (end < array.length && array[end] != 0) {
-				end++;
-			}
-
-			name = new String(array, nameOffset, end - nameOffset);
-		}
+	void setName(String name) {
+		this.name = name;
 	}
 
 	public void savteToByteBuffer(ByteBuffer buf, ElfClass elfClass) {
