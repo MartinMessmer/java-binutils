@@ -176,8 +176,8 @@ public class Elf implements Closeable {
 	 * New Constructor Added to Generate ELF and Save it later to a File!
 	 */
 	public Elf(ElfClass elfClass, ByteOrder byteOrder, AbiType abiType, ObjectFileType elfType, MachineType machineType,
-			int flags) {
-		header = new Header(elfClass, byteOrder, abiType, elfType, machineType, flags);
+			int flags, long entryPoint) {
+		header = new Header(elfClass, byteOrder, abiType, elfType, machineType, flags, entryPoint);
 		sectionHeaders = new ArrayList<SectionHeader>(1);
 		sectionHeaders.add(new SectionHeader());
 		programHeaders = new ArrayList<ProgramHeader>();

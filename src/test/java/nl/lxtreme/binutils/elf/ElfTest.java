@@ -114,7 +114,7 @@ public class ElfTest {
 		Elf readedElf = new Elf(getResource(testFile));
 
 		Elf createdElf = new Elf(readedElf.header.elfClass, readedElf.header.elfByteOrder, readedElf.header.abiType,
-				readedElf.header.elfType, readedElf.header.machineType, readedElf.header.flags);
+				readedElf.header.elfType, readedElf.header.machineType, readedElf.header.flags, readedElf.header.entryPoint);
 
 		for (SectionHeader section : readedElf.sectionHeaders) {
 			if (section.type != SectionType.NULL) {

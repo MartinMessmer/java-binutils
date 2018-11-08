@@ -134,7 +134,7 @@ public class Header {
 	}
 
 	public Header(ElfClass elfClass, ByteOrder byteOrder, AbiType abiType, ObjectFileType elfType,
-			MachineType machineType, int flags) {
+			MachineType machineType, long flags, long entryPoint) {
 		this.elfClass = elfClass;
 		this.elfByteOrder = byteOrder;
 		this.abiType = abiType;
@@ -142,7 +142,7 @@ public class Header {
 		this.elfType = elfType;
 		this.machineType = machineType;
 		this.elfVersion = 1;
-		this.entryPoint = 0;
+		this.entryPoint = entryPoint;
 		this.flags = 0;
 		this.size = (short) (elfClass == ElfClass.CLASS_32 ? 52 : 64);
 		this.programHeaderOffset = this.size;
