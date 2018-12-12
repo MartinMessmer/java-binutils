@@ -18,7 +18,6 @@ import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import nl.lxtreme.binutils.elf.DynamicEntry.Tag;
@@ -184,8 +183,7 @@ public class Elf implements Closeable {
 		dynamicTable = new DynamicEntry[0];
 	}
 
-	public void AddSection(ByteBuffer section, String name, SectionType type, long flags, int link, int info,
-			long alignment, long entrySize) {
+	public void AddSection(ByteBuffer section, String name, SectionType type, long flags, int link, int info, long alignment, long entrySize) {
 		SectionHeader sectionHeader = new SectionHeader(section, name, type, flags, link, info, alignment, entrySize);
 		AddSection(sectionHeader);
 	}
